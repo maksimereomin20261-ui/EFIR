@@ -520,10 +520,18 @@ class Window:
                     self.text_fades[item] = (phase,step,value,target)
             self.root.after(40, self.animate)
 
+    def destroy_window(self):
+        # Cancel timer callbacks before destroying the Tcl interpreter.
+        try:
+            for callback_id in self.root.tk.call('after', 'info'):
+                self.root.after_cancel(callback_id)
+        finally:
+            self.root.destroy()
+
     def close(self):
         if self.done:
             # Do not destroy the canvas during its own click callback.
-            self.root.after_idle(self.root.destroy)
+            self.root.after_idle(self.destroy_window)
         else:
             messagebox.showinfo('Эфир', 'Дождитесь завершения установки или проверки обновления.', parent=self.root)
 
@@ -562,7 +570,7 @@ class Window:
                     self.done = True
                     self.root.withdraw()
                 elif kind == 'exit':
-                    self.root.destroy()
+                    self.destroy_window()
                     return
         except queue.Empty:
             pass
