@@ -103,6 +103,21 @@ class SafeUpdate(unittest.TestCase):
             m.Window.worker(window)
         return window.events
 
+    def test_worker_reports_network_failure_as_connection_error(self):
+        def offline(): raise OSError('offline')
+        events = self.run_worker(offline, lambda *a, **k: None)
+        errors = [value for kind, value in events if kind == 'error']
+        self.assertEqual(errors[0][0], 'Ошибка подключения')
+        self.assertIn('offline', errors[0][1])
+        self.assertTrue((self.root/'launcher-error.log').is_file())
+
+    def test_worker_reports_package_failure_as_installation_error(self):
+        with zipfile.ZipFile(self.archive, 'w') as z:
+            z.writestr('Efir.exe', 'broken')
+        events = self.run_worker(lambda: ('new', 'url', self.b, 10), lambda *a, **k: None)
+        errors = [value for kind, value in events if kind == 'error']
+        self.assertEqual(errors[0][0], 'Ошибка установки')
+
     def test_worker_open_error_uses_old_and_does_not_commit_new(self):
         old = self.install(self.a)
         calls = []

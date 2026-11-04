@@ -2,6 +2,7 @@
 import ctypes
 import hashlib
 import json
+import math
 import os
 import queue
 import re
@@ -390,53 +391,79 @@ class Window:
         return self.canvas.create_text(self.p(x), self.p(y), text=value, fill=color,
                                        font=('Segoe UI', -self.p(size), weight), **kw)
 
+    def microphone(self, cx, cy, size):
+        """Vector microphone, scaled with the window rather than an icon font."""
+        c = self.canvas
+        k = size / 48.0
+        def box(a, b, d, e):
+            return self.shape((cx+a*k, cy+b*k, cx+d*k, cy+e*k))
+        def line(coords, color, width):
+            points = []
+            for x, y in coords:
+                points += [cx+x*k, cy+y*k]
+            c.create_line(*self.shape(points), fill=color, width=max(1, self.p(width*k)), capstyle='round', joinstyle='round', smooth=True)
+        # Outer cradle, stem and stand.
+        c.create_arc(*box(-20, -8, 20, 28), start=180, extent=180, style='arc',
+                     outline='#a158f5', width=max(1, self.p(4*k)))
+        line([(0, 21), (0, 32)], '#a158f5', 4)
+        line([(-9, 32), (9, 32)], '#a158f5', 4)
+        # The body is a gently shaded, rounded capsule.
+        self.rounded(cx-10*k, cy-25*k, cx+10*k, cy+15*k, 10*k, '#8a39ee', '#a657f4', max(1, 1*k))
+        c.create_oval(*box(-8, -23, 8, -7), fill='#b071f7', outline='')
+        c.create_rectangle(*box(-8, -15, 8, -4), fill='#a35cf5', outline='')
+        c.create_oval(*box(-8, -12, 8, 13), fill='#9545ef', outline='')
+
     def draw_ui(self):
         c = self.canvas
-        self.rounded(1, 1, 499, 309, 12, '#0b081c', '#56319a', 1)
-        # Understated, clipped-at-the-edges dark violet curves, matching the reference.
-        c.create_polygon(*self.shape((2,39,130,39,112,52,91,72,62,90,2,107)),
-                         fill='#110b29', outline='', smooth=True)
-        c.create_polygon(*self.shape((499,63,499,178,445,168,405,184,370,207,394,169,433,134,464,105)),
-                         fill='#150b33', outline='', smooth=True)
-        c.create_line(*self.shape((2,38,498,38)), fill='#231a3c')
-        self.text(19, 19, 'Э', 24, '#9b63ff', 'bold')
-        self.text(41, 19, 'Эфир', 15, '#f6f3ff', 'bold', anchor='w')
-        # Canvas buttons are real, focusable controls with generous click targets.
+        self.rounded(1, 1, 499, 309, 12, '#090617', '#713ab3', 1)
+        # Subtle curved colour fields retain the reference's dark, layered background.
+        c.create_polygon(*self.shape((2,39,155,39,135,52,116,73,82,100,42,119,2,122)),
+                         fill='#130b29', outline='', smooth=True, splinesteps=32)
+        c.create_polygon(*self.shape((2,167,35,145,66,138,94,143,120,154,83,145,46,153,2,181)),
+                         fill='#0f0922', outline='', smooth=True, splinesteps=32)
+        c.create_polygon(*self.shape((499,50,499,109,477,111,447,121,420,140,390,165,365,180,379,153,399,128,431,103,467,89)),
+                         fill='#160c32', outline='', smooth=True, splinesteps=32)
+        c.create_line(*self.shape((2,38,498,38)), fill='#2a1b43')
+        self.microphone(24, 17, 15)
+        self.text(49, 19, 'Эфир', 15, '#f8f5ff', 'bold', anchor='w')
+        self.text(91, 19, 'by maxon3r', 10, '#9a8abf', anchor='w')
         for name, x in [('minimize', 444), ('close', 478)]:
-            c.create_rectangle(*self.shape((x-16,3,x+16,35)), fill='#0b081c', outline='', tags=(name,))
-        c.create_line(*self.shape((439,19,449,19)), fill='#ddd3f3', width=self.p(1), tags=('minimize',))
-        c.create_line(*self.shape((473,14,483,24)), fill='#ddd3f3', width=self.p(1), tags=('close',))
-        c.create_line(*self.shape((483,14,473,24)), fill='#ddd3f3', width=self.p(1), tags=('close',))
+            c.create_rectangle(*self.shape((x-16,3,x+16,35)), fill='#090617', outline='', tags=(name,))
+        c.create_line(*self.shape((439,19,449,19)), fill='#c3addf', width=self.p(1), tags=('minimize',))
+        c.create_line(*self.shape((473,14,483,24)), fill='#c3addf', width=self.p(1), tags=('close',))
+        c.create_line(*self.shape((483,14,473,24)), fill='#c3addf', width=self.p(1), tags=('close',))
         c.tag_bind('minimize', '<Button-1>', lambda _e: self.minimize())
         c.tag_bind('close', '<Button-1>', lambda _e: self.close())
-        c.tag_bind('minimize', '<Enter>', lambda _e: c.configure(cursor='hand2'))
-        c.tag_bind('close', '<Enter>', lambda _e: c.configure(cursor='hand2'))
-        c.tag_bind('minimize', '<Leave>', lambda _e: c.configure(cursor=''))
-        c.tag_bind('close', '<Leave>', lambda _e: c.configure(cursor=''))
-        self.rounded(211, 52, 289, 130, 16, '#171032')
-        self.rounded(214, 55, 286, 127, 14, '#0a0719', '#6330b9')
-        self.text(250, 91, 'Э', 46, '#9556ff', 'bold')
-        self.text(250, 148, 'Эфир', 34, '#e5dbfc', 'bold')
-        self.heading = self.text(250, 180, 'Подготовка к установке…', 16, '#b6a5d9', width=self.p(450))
-        # Soft glow and a slim track. Segment colours create a restrained gradient.
-        self.rounded(41, 205, 423, 217, 6, '#21113e')
-        self.rounded(43, 207, 421, 215, 4, '#211738', '#2a1b4c')
+        for name in ('minimize', 'close'):
+            c.tag_bind(name, '<Enter>', lambda _e: c.configure(cursor='hand2'))
+            c.tag_bind(name, '<Leave>', lambda _e: c.configure(cursor=''))
+        # Concentric outlines approximate a soft halo without external assets.
+        self.rounded(205, 46, 295, 126, 20, '#100824', '#170b31')
+        self.rounded(208, 48, 292, 124, 19, '#100821', '#271047')
+        self.logo_edge = self.rounded(210, 50, 290, 122, 18, '#0c071b', '#7d31c8', 1)
+        self.microphone(250, 80, 41)
+        self.text(250, 143, 'Эфир', 30, '#f7f3ff', 'bold')
+        self.text(250, 167, 'Умная автозамена текста', 14, '#a994d9')
+        self.heading = self.text(42, 198, 'Подготовка к запуску…', 13, '#f1ecfb', anchor='w', width=self.p(390))
+        self.rounded(40, 215, 423, 229, 7, '#1a0d31')
+        self.rounded(42, 218, 421, 226, 4, '#211335', '#2d1b47')
         self.bar_parts = []
         for i in range(42):
-            t=i/41
-            color = '#%02x%02x%02x' % (int(105+57*t), int(49+40*t), 246+int(9*t))
-            part=c.create_rectangle(self.p(44),self.p(208),self.p(44),self.p(214), fill=color, outline='', state='hidden')
-            self.bar_parts.append(part)
-        self.percent = self.text(451, 211, '', 15, '#a975ff', 'bold')
-        # Spinner is a true indeterminate activity indicator, not a progress gauge.
-        c.create_oval(*self.shape((151, 235, 165, 249)), outline='#35245e', width=self.p(2))
-        self.ring = c.create_arc(*self.shape((151, 235, 165, 249)), start=20, extent=100,
-                                 style='arc', outline='#a063ff', width=self.p(2))
-        self.status = self.text(176, 242, 'Проверяем версию на GitHub…', 13, '#b9a9d5', anchor='w', width=self.p(290))
-        c.create_line(*self.shape((2,269,498,269)), fill='#20172e')
-        c.create_oval(*self.shape((142,282,154,294)), outline='#9f88c6', width=self.p(1))
-        self.text(148, 288, 'i', 9, '#b7a4d3', 'bold')
-        self.text(166, 288, 'Пожалуйста, не закрывайте окно', 12, '#a998c6', anchor='w')
+            t = i / 41
+            color = '#%02x%02x%02x' % (int(118+49*t), int(45+35*t), 242+int(13*t))
+            self.bar_parts.append(c.create_rectangle(self.p(43), self.p(219), self.p(43), self.p(225),
+                                                    fill=color, outline='', state='hidden'))
+        self.percent = self.text(452, 222, '', 15, '#b563ff', 'bold')
+        self.spinner_dots = []
+        for i in range(8):
+            angle = 2 * math.pi * i / 8
+            x, y = 157 + 7*math.cos(angle), 248 + 7*math.sin(angle)
+            self.spinner_dots.append(c.create_oval(*self.shape((x-1.5,y-1.5,x+1.5,y+1.5)), fill='#59347f', outline=''))
+        self.status = self.text(177, 248, 'Подготавливаем запуск…', 12, '#b8a7d7', anchor='w', width=self.p(300))
+        c.create_line(*self.shape((2,269,498,269)), fill='#27183d')
+        c.create_oval(*self.shape((140,281,154,295)), outline='#aa87db', width=self.p(1))
+        self.text(147, 288, 'i', 9, '#bba3df', 'bold')
+        self.footer = self.text(165, 288, 'Пожалуйста, не закрывайте окно', 12, '#ad98d1', anchor='w')
 
     def on_map(self, _event):
         if self.minimized and self.root.state() == 'normal':
@@ -451,31 +478,46 @@ class Window:
         self.root.iconify()
 
     def set_text(self, item, value, target):
-        # New strings fade in from the dark background; pending updates coalesce.
-        self.canvas.itemconfigure(item, text=value, fill='#44375e')
-        self.text_fades[item] = (0, target)
+        # Fade out the previous label before fading in the newest queued value.
+        if self.canvas.itemcget(item, 'text') == value and item not in self.text_fades:
+            return
+        if item in self.text_fades:
+            phase, step, _, _ = self.text_fades[item]
+            self.text_fades[item] = (phase, step, value, target) if phase == 'out' else ('out', 0, value, target)
+        else:
+            self.text_fades[item] = ('out', 0, value, target)
 
     def animate(self):
         if not self.done:
-            self.spinner_angle = (self.spinner_angle - 16) % 360
-            self.canvas.itemconfigure(self.ring, start=self.spinner_angle)
-            self.display_progress += (self.actual_progress-self.display_progress)*0.24
+            self.spinner_angle = (self.spinner_angle + 1) % 80
+            palette = ('#c489ff', '#a96ef3', '#8c53d2', '#7140ae', '#563184', '#45286a', '#45286a', '#563184')
+            for index, dot in enumerate(self.spinner_dots):
+                self.canvas.itemconfigure(dot, fill=palette[(index-self.spinner_angle//3) % 8])
+            glow = ('#7330bd','#7932c5','#8034cf','#8737d7','#8034cf','#7932c5')
+            self.canvas.itemconfigure(self.logo_edge, outline=glow[(self.spinner_angle//8) % len(glow)])
+            self.display_progress += (self.actual_progress-self.display_progress)*0.18
             if abs(self.actual_progress-self.display_progress)<0.001:
                 self.display_progress=self.actual_progress
             for i, part in enumerate(self.bar_parts):
-                left = 44+376*i/42
-                right = min(44+376*(i+1)/42,44+376*self.display_progress)
+                left = 43+377*i/42
+                right = min(43+377*(i+1)/42,43+377*self.display_progress)
                 x1, x2 = self.p(left), self.p(max(left, right))
-                self.canvas.coords(part, x1,self.p(208),x2,self.p(214))
+                self.canvas.coords(part, x1,self.p(219),x2,self.p(225))
                 self.canvas.itemconfigure(part, state='normal' if self.determinate and x2 > x1 else 'hidden')
-            for item, (step, target) in list(self.text_fades.items()):
+            for item, (phase, step, value, target) in list(self.text_fades.items()):
                 step += 1
-                fraction = min(1, step/5)
+                amount = min(1, step/4)
+                fraction = 1-amount if phase == 'out' else amount
                 rgb0 = (68,55,94); rgb1 = tuple(int(target[i:i+2],16) for i in (1,3,5))
                 color = '#'+''.join(f'{round(a+(b-a)*fraction):02x}' for a,b in zip(rgb0,rgb1))
                 self.canvas.itemconfigure(item, fill=color)
-                if fraction >= 1: del self.text_fades[item]
-                else: self.text_fades[item] = (step,target)
+                if step >= 4 and phase == 'out':
+                    self.canvas.itemconfigure(item, text=value)
+                    self.text_fades[item] = ('in', 0, value, target)
+                elif step >= 4:
+                    del self.text_fades[item]
+                else:
+                    self.text_fades[item] = (phase,step,value,target)
             self.root.after(40, self.animate)
 
     def close(self):
@@ -494,7 +536,7 @@ class Window:
                 if kind == 'status':
                     self.set_text(self.status, value, '#b9a9d5')
                 elif kind == 'heading':
-                    self.set_text(self.heading, value, '#b6a5d9')
+                    self.set_text(self.heading, value, '#f1ecfb')
                 elif kind == 'indeterminate':
                     self.determinate = False
                     self.actual_progress = 0
@@ -508,9 +550,13 @@ class Window:
                     messagebox.showwarning('Эфир', value, parent=self.root)
                 elif kind == 'error':
                     self.done = True
-                    messagebox.showerror('Эфир', value, parent=self.root)
-                    self.root.destroy()
-                    return
+                    title, detail = value
+                    self.text_fades.clear()
+                    self.canvas.itemconfigure(self.heading, text=title, fill='#f5e9ff')
+                    self.canvas.itemconfigure(self.status, text=detail[:65] + ('…' if len(detail)>65 else ''), fill='#e5b9df')
+                    self.canvas.itemconfigure(self.footer, text='Закройте окно и попробуйте ещё раз', fill='#c4a8d7')
+                    self.canvas.itemconfigure(self.percent, text='')
+                    for part in self.bar_parts: self.canvas.itemconfigure(part, state='hidden')
                 elif kind == 'launched':
                     self.done = True
                     self.root.withdraw()
@@ -521,7 +567,9 @@ class Window:
             pass
         self.root.after(50, self.poll)
     def worker(self):
+        phase = 'installation'
         try:
+            self.emit('heading','Запуск программы…'); self.emit('status','Проверяем установленные файлы…')
             ROOT.mkdir(parents=True,exist_ok=True)
             old=current(); chosen=old
             if old is None:
@@ -531,29 +579,40 @@ class Window:
             if old is not None:
                 self.emit('heading','Проверка обновлений…')
             try:
-                self.emit('status','Проверяем последнюю версию на GitHub…')
+                phase = 'connection'
+                self.emit('heading','Поиск обновлений…')
+                self.emit('status','Проверяем версию на GitHub…')
                 tag,url,digest,size=release_metadata()
                 self.emit('connection', True)
                 if old is None or old.parent.name != digest:
-                    self.emit('heading','Загрузка Эфира')
+                    phase = 'download'
+                    self.emit('heading','Загрузка файлов…')
                     with tempfile.TemporaryDirectory(prefix='efir-') as tmp:
                         archive=Path(tmp)/ASSET
+                        last_mb = -1
                         def progress(done,total):
-                            self.emit('status',f'Загружено {done//1024//1024} из {(total+1024*1024-1)//1024//1024} МБ')
+                            nonlocal last_mb
+                            mb = done//1024//1024
+                            if mb != last_mb or done == total:
+                                last_mb = mb
+                                self.emit('status',f'Загружено {mb} из {(total+1024*1024-1)//1024//1024} МБ')
                             self.emit('progress', min(done/total,1))
                         actual=download(url,archive,size,progress)
                         if actual != digest: raise ValueError('Контрольная сумма пакета не совпадает')
-                        self.emit('heading','Установка Эфира'); self.emit('status','Проверяем и распаковываем файлы…'); self.emit('indeterminate', None)
+                        phase = 'installation'
+                        self.emit('heading','Установка обновления…'); self.emit('status','Проверяем и распаковываем файлы…'); self.emit('indeterminate', None)
                         chosen=prepare_version(archive,digest)
             except Exception as exc:
                 self.emit('connection', False)
                 if old is None: raise RuntimeError(f'Не удалось получить Эфир: {exc}') from exc
                 chosen=old
                 self.emit('warning','Не удалось проверить или установить обновление. Запускается ранее установленная версия.\n\n'+str(exc))
+            phase = 'installation'
             ensure_launcher_installed()
             try: create_shortcut()
             except Exception as e: self.emit('warning','Программа установлена, но ярлык не создан: '+str(e))
-            self.emit('heading','Готово'); self.emit('status','Открываем Эфир…'); self.emit('indeterminate',None)
+            phase = 'launch'
+            self.emit('heading','Запуск программы…'); self.emit('status','Открываем Эфир…'); self.emit('indeterminate',None)
             env=dict(os.environ, EFIR_LAUNCHER_PATH=str(LAUNCHER), PYINSTALLER_RESET_ENVIRONMENT='1')
             try:
                 proc=subprocess.Popen([str(chosen)],cwd=str(chosen.parent),env=env)
@@ -566,8 +625,17 @@ class Window:
                 write_state(chosen.parent.name, tag)
             # Keep old versions and quarantined folders; they may contain personal data.
             # A running process is not proof that the UI or settings loaded successfully.
-            self.emit('launched',None); proc.wait(); self.emit('exit',None)
-        except Exception as exc: self.emit('error',str(exc))
+            self.emit('heading','Готово'); self.emit('launched',None); proc.wait(); self.emit('exit',None)
+        except Exception as exc:
+            heading = {'connection':'Ошибка подключения', 'download':'Ошибка загрузки',
+                       'installation':'Ошибка установки', 'launch':'Ошибка запуска'}.get(phase, 'Ошибка')
+            detail = str(exc).replace('\n', ' ')
+            try:
+                ROOT.mkdir(parents=True, exist_ok=True)
+                (ROOT/'launcher-error.log').write_text(heading + ': ' + detail, encoding='utf-8')
+            except OSError:
+                pass
+            self.emit('error',(heading, detail or 'Неизвестная ошибка'))
 
 
 def main():
