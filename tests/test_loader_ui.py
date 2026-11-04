@@ -87,6 +87,6 @@ class LoaderUITests(unittest.TestCase):
         win.canvas.event_generate('<Motion>',x=478,y=19);win.canvas.event_generate('<Button-1>',x=478,y=19)
         win.root.update()
         print('UI test: clicked final close', flush=True)
-        self.assertFalse(win.root.winfo_exists())
+        self.assertFalse(win.root.tk.call('info','commands','winfo'))
 
 if __name__=='__main__': unittest.main()
