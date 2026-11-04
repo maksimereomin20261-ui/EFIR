@@ -71,16 +71,21 @@ class LoaderUITests(unittest.TestCase):
 
     def test_close_and_minimize_buttons(self):
         win=self.make_window(1.0)
+        print('UI test: created', flush=True)
         with patch.object(m.messagebox,'showinfo') as info:
             win.canvas.event_generate('<Motion>',x=478,y=19);win.canvas.event_generate('<Button-1>',x=478,y=19);win.root.update()
+            print('UI test: active close', flush=True)
             info.assert_called_once()
             self.assertTrue(win.root.winfo_exists())
         win.canvas.event_generate('<Motion>',x=444,y=19);win.canvas.event_generate('<Button-1>',x=444,y=19);win.root.update()
+        print('UI test: minimized', flush=True)
         self.assertEqual(win.root.state(),'iconic')
         win.root.deiconify();win.root.update()
         self.assertEqual(win.root.state(),'normal')
+        print('UI test: restored', flush=True)
         win.done=True
         win.canvas.event_generate('<Motion>',x=478,y=19);win.canvas.event_generate('<Button-1>',x=478,y=19)
+        print('UI test: clicked final close', flush=True)
         self.assertFalse(win.root.winfo_exists())
 
 if __name__=='__main__': unittest.main()
