@@ -14,6 +14,12 @@ with tempfile.TemporaryDirectory(prefix='efir-smoke-') as tmp:
     try:
         user32 = ctypes.windll.user32
         callback = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+        user32.EnumWindows.argtypes = [callback, ctypes.c_void_p]
+        user32.EnumWindows.restype = ctypes.c_bool
+        user32.GetWindowThreadProcessId.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+        user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
+        user32.GetWindowTextLengthW.argtypes = [ctypes.c_void_p]
+        user32.GetWindowTextW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
         deadline = time.monotonic() + 35
         found = False
         while time.monotonic() < deadline and proc.poll() is None and not found:
