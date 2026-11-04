@@ -25,7 +25,10 @@ class LoaderUITests(unittest.TestCase):
 
     @staticmethod
     def destroy(win):
-        try: win.root.destroy()
+        try:
+            for callback_id in win.root.tk.call('after', 'info'):
+                win.root.after_cancel(callback_id)
+            win.root.destroy()
         except Exception: pass
 
     def test_fixed_size_and_center_at_logical_scales(self):
