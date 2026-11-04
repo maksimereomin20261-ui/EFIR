@@ -522,7 +522,8 @@ class Window:
 
     def close(self):
         if self.done:
-            self.root.destroy()
+            # Do not destroy the canvas during its own click callback.
+            self.root.after_idle(self.root.destroy)
         else:
             messagebox.showinfo('Эфир', 'Дождитесь завершения установки или проверки обновления.', parent=self.root)
 
