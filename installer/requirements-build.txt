@@ -1,0 +1,8 @@
+# Versions from the successful Windows CI build; update and retest together.
+altgraph==0.17.5
+packaging==26.3
+pefile==2023.2.7
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2026.9
+pywin32-ctypes==0.2.3
+setuptools==65.5.0
