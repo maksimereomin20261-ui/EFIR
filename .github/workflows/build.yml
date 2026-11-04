@@ -1,5 +1,6 @@
 name: Проверить и собрать Эфир
 on:
+  workflow_call:
   push:
   pull_request:
   workflow_dispatch:
@@ -41,6 +42,8 @@ jobs:
           Compress-Archive -Path dist/Efir/* -DestinationPath artifacts/Efir-App.zip
           python installer/verify_package.py artifacts/Efir-App.zip
           if ($LASTEXITCODE -ne 0) { throw 'Ошибка проверки пакета' }
+          python tests/smoke_installer.py artifacts/Efir-App.zip
+          if ($LASTEXITCODE -ne 0) { throw 'Ошибка проверки установки' }
       - name: Собрать установщик
         shell: pwsh
         run: |
