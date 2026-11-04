@@ -24,9 +24,11 @@ class ArchiveTests(unittest.TestCase):
                 with self.subTest(name=name):
                     with zipfile.ZipFile(archive, 'w') as z:
                         for required in m.REQUIRED_FILES: z.writestr(required, 'ok')
-                        z.writestr(name, 'bad')
+                        item = zipfile.ZipInfo(name)
+                        item.filename = name  # Preserve backslashes on Windows as a hostile ZIP entry.
+                        z.writestr(item, 'bad')
                     with self.assertRaises(ValueError): m.extract_package(archive, Path(tmp)/'out')
             with zipfile.ZipFile(archive, 'w') as z: z.writestr('Efir.exe','ok')
-            with self.assertRaises(ValueError): m.extract_package(archive, Path(tmp)/'out')
+            with self.assertRaises(ValueError): m.extract_package(archive, Path(tmp)/'missing')
 
 if __name__ == '__main__': unittest.main()
